@@ -1,9 +1,11 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useState } from "react";
 import { useCryptoData } from "@/hooks/useCryptoData";
+import { useCryptoFilters } from "@/hooks/useCryptoFilters";
 import { CryptocurrencyCard } from "./CryptocurrencyCard";
 import { Pagination } from "./Pagination";
+import { SearchFilter, FilterOptions } from "./SearchFilter";
 import { CryptocurrencyListSkeleton } from "./ui/Skeleton";
 import { RefreshCw, AlertCircle } from "lucide-react";
 
@@ -18,6 +20,22 @@ export const CryptocurrencyList = () => {
     loadMoreData,
     refreshData,
   } = useCryptoData();
+
+  const [filters, setFilters] = useState<FilterOptions>({
+    search: '',
+    sortBy: 'rank',
+    sortOrder: 'asc',
+    minMarketCap: '',
+    maxMarketCap: '',
+    minVolume: '',
+    maxVolume: '',
+    minChange: '',
+    maxChange: '',
+    showOnlyGainers: false,
+    showOnlyLosers: false,
+  });
+
+  const filteredCryptocurrencies = useCryptoFilters(cryptocurrencies, filters);
 
   useEffect(() => {
     loadInitialData();
@@ -91,6 +109,12 @@ export const CryptocurrencyList = () => {
         </div>
       </div>
 
+      <SearchFilter
+        onFilterChange={setFilters}
+        totalResults={filteredCryptocurrencies.length}
+        isLoading={loading}
+      />
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-white dark:bg-gray-800 rounded-xl p-6 border border-gray-200 dark:border-gray-700">
           <div className="flex items-center space-x-3">
@@ -103,7 +127,7 @@ export const CryptocurrencyList = () => {
               </p>
               <p className="text-2xl font-bold text-gray-900 dark:text-white">
                 $
-                {cryptocurrencies
+                {filteredCryptocurrencies
                   .reduce((sum, crypto) => {
                     const usdQuote = crypto.quotes.find(
                       (q) => q.name === "USD"
@@ -127,7 +151,7 @@ export const CryptocurrencyList = () => {
               </p>
               <p className="text-2xl font-bold text-gray-900 dark:text-white">
                 $
-                {cryptocurrencies
+                {filteredCryptocurrencies
                   .reduce((sum, crypto) => {
                     const usdQuote = crypto.quotes.find(
                       (q) => q.name === "USD"
@@ -150,7 +174,7 @@ export const CryptocurrencyList = () => {
                 Active Cryptos
               </p>
               <p className="text-2xl font-bold text-gray-900 dark:text-white">
-                {cryptocurrencies.length}
+                {filteredCryptocurrencies.length}
               </p>
             </div>
           </div>
@@ -159,13 +183,25 @@ export const CryptocurrencyList = () => {
 
       <div className="flex gap-6">
         <div className="grid gap-6 md:grid-cols-2 xl:grid-cols-3">
-          {cryptocurrencies.map((crypto, index) => (
-            <CryptocurrencyCard
-              key={crypto.id}
-              crypto={crypto}
-              rank={index + 1}
-            />
-          ))}
+          {filteredCryptocurrencies.length > 0 ? (
+            filteredCryptocurrencies.map((crypto, index) => (
+              <CryptocurrencyCard
+                key={crypto.id}
+                crypto={crypto}
+                rank={crypto.cmcRank || index + 1}
+              />
+            ))
+          ) : (
+            <div className="col-span-full flex flex-col items-center justify-center py-12">
+              <div className="text-6xl mb-4">🔍</div>
+              <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
+                No cryptocurrencies found
+              </h3>
+              <p className="text-gray-600 dark:text-gray-400 text-center max-w-md">
+                Try adjusting your search criteria or filters to find what you're looking for.
+              </p>
+            </div>
+          )}
           {loading && cryptocurrencies.length > 0 && (
             <CryptocurrencyListSkeleton count={1} />
           )}
@@ -186,7 +222,7 @@ export const CryptocurrencyList = () => {
           <p className="text-sm text-gray-500 dark:text-gray-400 mb-2">
             Showing{" "}
             <span className="font-semibold text-gray-900 dark:text-white">
-              {cryptocurrencies.length}
+              {filteredCryptocurrencies.length}
             </span>{" "}
             cryptocurrencies
             {pagination.totalItems > 0 && (
